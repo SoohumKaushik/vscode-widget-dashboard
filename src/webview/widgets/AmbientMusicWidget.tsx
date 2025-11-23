@@ -25,12 +25,6 @@ const AMBIENT_SOUNDS: Sound[] = [
         url: 'https://assets.mixkit.co/active_storage/sfx/2390/2390-preview.mp3'
     },
     {
-        id: 'lofi',
-        name: 'Lo-Fi Beats',
-        emoji: '🎹',
-        url: 'https://assets.mixkit.co/active_storage/sfx/2008/2008-preview.mp3'
-    },
-    {
         id: 'fire',
         name: 'Fireplace',
         emoji: '🔥',
@@ -38,9 +32,9 @@ const AMBIENT_SOUNDS: Sound[] = [
     },
     {
         id: 'forest',
-        name: 'Forest',
-        emoji: '🌲',
-        url: 'https://assets.mixkit.co/active_storage/sfx/2462/2462-preview.mp3'
+        name: 'Forest Birds',
+        emoji: '🐦',
+        url: 'https://assets.mixkit.co/active_storage/sfx/2459/2459-preview.mp3'
     },
     {
         id: 'wind',
