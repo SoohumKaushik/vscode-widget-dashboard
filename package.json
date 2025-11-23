@@ -1,0 +1,68 @@
+{
+  "name": "vscode-widget-dashboard",
+  "displayName": "Widget Dashboard",
+  "description": "Customizable iOS-style widget dashboard for VS Code",
+  "version": "0.0.1",
+  "publisher": "your-name",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "widgetDashboard.openDashboard",
+        "title": "Open Widget Dashboard",
+        "category": "Widget Dashboard"
+      },
+      {
+        "command": "widgetDashboard.addWidget",
+        "title": "Add Widget",
+        "category": "Widget Dashboard"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "widget-dashboard",
+          "title": "Widget Dashboard",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "widget-dashboard": [
+        {
+          "type": "webview",
+          "id": "widgetDashboard.mainView",
+          "name": "Dashboard"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node build.js",
+    "watch": "node build.js --watch",
+    "compile": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.106.1",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.27.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
