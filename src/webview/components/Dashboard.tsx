@@ -32,6 +32,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
     const [isStateLoaded, setIsStateLoaded] = useState(false);
     const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
     const [dragOverWidget, setDragOverWidget] = useState<string | null>(null);
+    const [gridRef, setGridRef] = useState<HTMLDivElement | null>(null);
 
     // Load state on mount
     useEffect(() => {
@@ -70,6 +71,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
         window.addEventListener('message', messageHandler);
         return () => window.removeEventListener('message', messageHandler);
     }, []);
+
+    // Calculate and set grid columns dynamically
+    useEffect(() => {
+        if (!gridRef) return;
+
+        const updateGridColumns = () => {
+            const gridWidth = gridRef.offsetWidth;
+            const gap = 16;
+            const minColWidth = 280;
+
+            // Calculate how many columns can fit
+            const columns = Math.max(1, Math.floor((gridWidth + gap) / (minColWidth + gap)));
+
+            // Set CSS variable for grid columns
+            gridRef.style.setProperty('--grid-columns', columns.toString());
+        };
+
+        // Update on mount and resize
+        updateGridColumns();
+
+        const resizeObserver = new ResizeObserver(updateGridColumns);
+        resizeObserver.observe(gridRef);
+
+        return () => resizeObserver.disconnect();
+    }, [gridRef]);
 
     // Save state whenever it changes
     useEffect(() => {
@@ -316,7 +342,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
                 </>
             )}
 
-            <div className={`widget-grid ${isEditMode ? 'edit-mode' : ''}`}>
+            <div
+                ref={setGridRef}
+                className={`widget-grid ${isEditMode ? 'edit-mode' : ''}`}
+            >
                 {userWidgets
                     .sort((a, b) => a.order - b.order)
                     .map((widget) => (

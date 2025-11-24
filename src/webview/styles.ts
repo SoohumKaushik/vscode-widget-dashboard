@@ -359,38 +359,68 @@ body {
 
 .widget-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
     grid-auto-rows: 200px;
     gap: 16px;
     padding: 16px;
     width: 100%;
-    grid-auto-flow: dense;
+    /* Remove dense packing to prevent overlaps */
+    grid-auto-flow: row;
+    /* Ensure grid can accommodate all widget sizes */
+    min-height: min-content;
+    /* Default to 2 columns, will be updated by JS */
+    --grid-columns: 2;
 }
 
 /* Widget Sizes for Bento Grid */
 .widget-size-small {
     grid-column: span 1;
     grid-row: span 1;
+    /* Prevent overflow */
+    max-width: 100%;
+    overflow: hidden;
+    contain: layout style paint;
 }
 
 .widget-size-medium {
     grid-column: span 1;
     grid-row: span 2;
+    max-width: 100%;
+    overflow: hidden;
+    contain: layout style paint;
 }
 
 .widget-size-large {
-    grid-column: span 2;
+    /* Limit to available columns, max 2 */
+    grid-column: span clamp(1, 2, var(--grid-columns, 2));
     grid-row: span 2;
+    max-width: 100%;
+    overflow: hidden;
+    contain: layout style paint;
 }
 
 .widget-size-wide {
-    grid-column: span 2;
+    /* Limit to available columns, max 2 */
+    grid-column: span clamp(1, 2, var(--grid-columns, 2));
     grid-row: span 1;
+    max-width: 100%;
+    overflow: hidden;
+    contain: layout style paint;
 }
 
 .widget-size-tall {
     grid-column: span 1;
     grid-row: span 3;
+    max-width: 100%;
+    overflow: hidden;
+    contain: layout style paint;
+}
+
+/* Prevent grid blowout - ensure widgets never exceed grid bounds */
+.widget-container {
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
 }
 
 /* Drag and Drop States */
@@ -456,27 +486,51 @@ body {
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
 }
 
-/* Responsive breakpoints */
-@media (max-width: 768px) {
+/* Responsive breakpoints for different sidebar widths */
+
+/* Very narrow sidebar (< 300px) - Single column, compact */
+@media (max-width: 300px) {
     .widget-grid {
         grid-template-columns: 1fr;
         grid-auto-rows: auto;
+        gap: 8px;
+        padding: 8px;
+        --grid-columns: 1;
     }
 
+    .dashboard {
+        padding: 6px;
+    }
+
+    .dashboard-title {
+        font-size: 16px;
+    }
+
+    .dashboard-header {
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+    }
+
+    /* Force all widgets to single column */
     .widget-size-small,
     .widget-size-medium,
     .widget-size-large,
     .widget-size-wide,
     .widget-size-tall {
-        grid-column: span 1;
-        grid-row: auto;
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+        min-height: 180px;
     }
 }
 
-@media (max-width: 400px) {
+/* Narrow sidebar (300px - 400px) - Single column */
+@media (min-width: 301px) and (max-width: 400px) {
     .widget-grid {
         grid-template-columns: 1fr;
+        grid-auto-rows: auto;
         gap: 10px;
+        padding: 10px;
+        --grid-columns: 1;
     }
 
     .dashboard {
@@ -488,27 +542,160 @@ body {
     }
 
     .dashboard-header {
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         padding-bottom: 8px;
     }
+
+    /* Force all widgets to single column */
+    .widget-size-small,
+    .widget-size-medium,
+    .widget-size-large,
+    .widget-size-wide,
+    .widget-size-tall {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+        min-height: 200px;
+    }
 }
 
-@media (min-width: 401px) and (max-width: 600px) {
+/* Medium-narrow sidebar (401px - 500px) - Single column, more breathing room */
+@media (min-width: 401px) and (max-width: 500px) {
     .widget-grid {
         grid-template-columns: 1fr;
+        grid-auto-rows: auto;
         gap: 12px;
+        padding: 12px;
+        --grid-columns: 1;
+    }
+
+    /* Force all widgets to single column */
+    .widget-size-small,
+    .widget-size-medium,
+    .widget-size-large,
+    .widget-size-wide,
+    .widget-size-tall {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+    }
+
+    .widget-size-small {
+        min-height: 180px;
+    }
+
+    .widget-size-medium,
+    .widget-size-tall {
+        min-height: 250px;
+    }
+
+    .widget-size-large,
+    .widget-size-wide {
+        min-height: 220px;
     }
 }
 
-@media (min-width: 601px) and (max-width: 900px) {
+/* Medium sidebar (501px - 650px) - Can fit 2 small widgets side by side */
+@media (min-width: 501px) and (max-width: 650px) {
     .widget-grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+        grid-auto-rows: 180px;
+        gap: 12px;
+        --grid-columns: 2;
+    }
+
+    /* Allow 2-column spans only if grid has 2+ columns */
+    .widget-size-small {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+
+    .widget-size-medium {
+        grid-column: span 1;
+        grid-row: span 2;
+    }
+
+    .widget-size-large {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 2;
+    }
+
+    .widget-size-wide {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 1;
+    }
+
+    .widget-size-tall {
+        grid-column: span 1;
+        grid-row: span 2;
     }
 }
 
-@media (min-width: 901px) {
+/* Medium-wide sidebar (651px - 800px) - 2 columns comfortable */
+@media (min-width: 651px) and (max-width: 800px) {
     .widget-grid {
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+        grid-auto-rows: 200px;
+        gap: 14px;
+        --grid-columns: 2;
+    }
+
+    .widget-size-small {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+
+    .widget-size-medium {
+        grid-column: span 1;
+        grid-row: span 2;
+    }
+
+    .widget-size-large {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 2;
+    }
+
+    .widget-size-wide {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 1;
+    }
+
+    .widget-size-tall {
+        grid-column: span 1;
+        grid-row: span 2;
+    }
+}
+
+/* Wide sidebar (801px+) - Full bento grid layout */
+@media (min-width: 801px) {
+    .widget-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+        grid-auto-rows: 200px;
+        gap: 16px;
+        --grid-columns: 3;
+    }
+
+    .widget-size-small {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+
+    .widget-size-medium {
+        grid-column: span 1;
+        grid-row: span 2;
+    }
+
+    .widget-size-large {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 2;
+    }
+
+    .widget-size-wide {
+        grid-column: span min(2, var(--grid-columns, 2));
+        grid-row: span 1;
+    }
+
+    .widget-size-tall {
+        grid-column: span 1;
+        grid-row: span 3;
     }
 }
 
@@ -540,6 +727,8 @@ body {
     position: relative;
     transition: all 0.2s ease;
     box-sizing: border-box;
+    width: 100%;
+    word-wrap: break-word;
 }
 
 @media (max-width: 400px) {
@@ -983,6 +1172,7 @@ body {
     align-items: center;
     justify-content: center;
     color: white;
+    flex-shrink: 0;
 }
 
 .size-toggle-btn:hover {
@@ -1007,6 +1197,7 @@ body {
     align-items: center;
     justify-content: center;
     color: white;
+    flex-shrink: 0;
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -1037,6 +1228,9 @@ body {
     opacity: 0.6;
     text-align: center;
     margin-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .league-selector {
@@ -1161,6 +1355,7 @@ body {
     padding: 20px;
     font-size: clamp(12px, 3vw, 14px);
     opacity: 0.7;
+    word-wrap: break-word;
 }
 
 .error-text {
@@ -1381,6 +1576,7 @@ body {
     margin-bottom: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 8px;
+    flex-wrap: wrap;
 }
 
 .github-tab {
@@ -1393,6 +1589,8 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .github-tab:hover {
@@ -1489,7 +1687,12 @@ body {
     margin-bottom: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
 }
 
 .notification-meta {
@@ -1498,10 +1701,15 @@ body {
     align-items: center;
     font-size: clamp(10px, 2vw, 11px);
     opacity: 0.7;
+    flex-wrap: wrap;
 }
 
 .notification-repo {
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
 }
 
 .notification-number {
@@ -1560,7 +1768,12 @@ body {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
 }
 
 .pr-meta {
@@ -1570,10 +1783,15 @@ body {
     font-size: clamp(10px, 2vw, 11px);
     opacity: 0.7;
     margin-bottom: 6px;
+    flex-wrap: wrap;
 }
 
 .pr-repo {
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
 }
 
 .pr-number {
@@ -1650,7 +1868,12 @@ body {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
 }
 
 .working-badge {
@@ -1670,10 +1893,15 @@ body {
     font-size: clamp(10px, 2vw, 11px);
     opacity: 0.7;
     margin-bottom: 6px;
+    flex-wrap: wrap;
 }
 
 .issue-repo {
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
 }
 
 .issue-number {
@@ -1739,6 +1967,172 @@ body {
 
 .auth-button:active {
     transform: translateY(0);
+}
+
+/* Responsive adjustments for narrow sidebars */
+
+/* Very narrow (< 300px) */
+@media (max-width: 300px) {
+    .github-widget {
+        padding: 8px;
+        min-height: 250px;
+    }
+
+    .github-title {
+        font-size: 13px;
+    }
+
+    .github-icon {
+        font-size: 14px;
+    }
+
+    .github-tab {
+        padding: 3px 6px;
+        font-size: 9px;
+    }
+
+    .notification-item,
+    .pr-item,
+    .issue-item {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .notification-icon {
+        font-size: 12px;
+    }
+
+    .notification-repo,
+    .pr-repo,
+    .issue-repo {
+        max-width: 80px;
+        font-size: 9px;
+    }
+
+    .github-content {
+        max-height: 250px;
+    }
+
+    .size-compact .github-content {
+        max-height: 150px;
+    }
+
+    .size-normal .github-content {
+        max-height: 250px;
+    }
+
+    .size-expanded .github-content {
+        max-height: 400px;
+    }
+
+    .time-digit,
+    .time-separator {
+        font-size: 28px;
+    }
+
+    .time-seconds {
+        font-size: 14px;
+    }
+
+    .clock-date {
+        font-size: 11px;
+    }
+
+    .clock-widget,
+    .welcome-widget {
+        min-height: 150px;
+        padding: 10px;
+    }
+}
+
+/* Narrow (301px - 400px) */
+@media (min-width: 301px) and (max-width: 400px) {
+    .github-widget {
+        padding: 10px;
+        min-height: 280px;
+    }
+
+    .github-title {
+        font-size: 14px;
+    }
+
+    .github-icon {
+        font-size: 16px;
+    }
+
+    .github-tab {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
+    .notification-item,
+    .pr-item,
+    .issue-item {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .notification-icon {
+        font-size: 14px;
+    }
+
+    .notification-repo,
+    .pr-repo,
+    .issue-repo {
+        max-width: 100px;
+    }
+
+    .github-content {
+        max-height: 300px;
+    }
+
+    .size-compact .github-content {
+        max-height: 180px;
+    }
+
+    .size-normal .github-content {
+        max-height: 300px;
+    }
+
+    .size-expanded .github-content {
+        max-height: 500px;
+    }
+
+    .time-digit,
+    .time-separator {
+        font-size: 32px;
+    }
+
+    .time-seconds {
+        font-size: 16px;
+    }
+
+    .clock-date {
+        font-size: 12px;
+    }
+
+    .clock-widget,
+    .welcome-widget {
+        min-height: 160px;
+    }
+}
+
+/* Medium-narrow (401px - 500px) */
+@media (min-width: 401px) and (max-width: 500px) {
+    .github-widget {
+        min-height: 320px;
+    }
+
+    .notification-repo,
+    .pr-repo,
+    .issue-repo {
+        max-width: 120px;
+    }
+
+    .clock-widget,
+    .welcome-widget {
+        min-height: 170px;
+    }
 }
 `;
 

@@ -27,11 +27,26 @@ const webviewConfig = {
 async function build() {
   try {
     if (watch) {
-      const ctx1 = await esbuild.context(extensionConfig);
+      console.log('[watch] build started');
+      const ctx1 = await esbuild.context({
+        ...extensionConfig,
+        plugins: [{
+          name: 'watch-plugin',
+          setup(build) {
+            build.onEnd(result => {
+              if (result.errors.length > 0) {
+                console.log('[watch] build failed');
+              } else {
+                console.log('[watch] build finished');
+              }
+            });
+          }
+        }]
+      });
       const ctx2 = await esbuild.context(webviewConfig);
       await ctx1.watch();
       await ctx2.watch();
-      console.log('Watching for changes...');
+      console.log('[watch] build finished');
     } else {
       await esbuild.build(extensionConfig);
       await esbuild.build(webviewConfig);
