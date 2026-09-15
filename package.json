@@ -70,7 +70,8 @@
     "build": "node build.js",
     "watch": "node build.js --watch",
     "compile": "tsc -p ./",
-    "icon": "node scripts/generate-icon.js"
+    "icon": "node scripts/generate-icon.js",
+    "package": "npx --yes @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
