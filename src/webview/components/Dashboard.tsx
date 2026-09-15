@@ -42,6 +42,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
         // Listen for state from extension
         const messageHandler = (event: MessageEvent) => {
             const message = event.data;
+            if (message.type === 'openAddMenu') {
+                setShowAddMenu(true);
+                return;
+            }
             if (message.type === 'setState' && message.state) {
                 if (message.state.widgets && message.state.widgets.length > 0) {
                     // Ensure all widgets have required fields

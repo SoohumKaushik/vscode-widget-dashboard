@@ -1,6 +1,8 @@
 .vscode/**
 .vscode-test/**
 src/**
+scripts/**
+node_modules/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -8,9 +10,9 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-node_modules/**
-!node_modules/react/**
-!node_modules/react-dom/**
-!node_modules/scheduler/**
 build.js
-
+resources/icon-marketplace.svg
+PROJECT_SUMMARY.md
+QUICKSTART.md
+SHOWCASE.md
+TESTING.md

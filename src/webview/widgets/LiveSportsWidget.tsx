@@ -86,10 +86,10 @@ export const LiveSportsWidget: React.FC = () => {
             fetchScores(selectedLeague);
         }, 30000);
 
-        // Update "time ago" every second
+        // Refresh the "time ago" label periodically (no need for every second).
         const tickInterval = setInterval(() => {
             setTick(prev => prev + 1);
-        }, 1000);
+        }, 15000);
 
         return () => {
             clearInterval(refreshInterval);

@@ -1,100 +1,91 @@
 # Widget Dashboard for VS Code
 
-A beautiful, customizable iOS-style widget dashboard for Visual Studio Code. Personalize your coding environment with widgets just like your iPhone home screen!
+A beautiful, customizable iOS-style widget dashboard for Visual Studio Code.
+Personalize your editor with widgets — just like your iPhone home screen.
+
+Open it from the **Widget Dashboard** icon in the Activity Bar (left sidebar).
 
 ## Features
 
-- 🎨 **Beautiful iOS-inspired design** - Glassmorphism effects, smooth animations, and Apple's design language
-- 📱 **Customizable widgets** - Add, remove, and arrange widgets to your liking
-- ⏰ **Built-in widgets**:
-  - Clock widget with live time and date
-  - Welcome widget with coding quotes
-  - More widgets coming soon!
-- 🌓 **Dark mode support** - Automatically adapts to your VS Code theme
-- ✨ **Smooth animations** - iOS-style transitions and effects
+- 🎨 **iOS-inspired design** — glassmorphism, smooth animations, adapts to your VS Code theme
+- 🧩 **Customizable layout** — add, remove, drag-to-reorder, and resize widgets (S / M / L / Wide / Tall)
+- 💾 **Persistent** — your layout and notes are saved between sessions
 
-## Installation
+## Built-in widgets
 
-### For Development
-
-1. Clone this repository
-2. Run `npm install` to install dependencies
-3. Run `npm run build` to build the extension
-4. Press `F5` to open a new VS Code window with the extension loaded
-5. Open the Widget Dashboard from the activity bar (left sidebar)
+| Widget | What it does |
+| --- | --- |
+| ⏰ **Clock** | Live time and date |
+| 👋 **Welcome** | Greeting with a rotating coding quote |
+| 📝 **Quick Notes** | A scratchpad that auto-saves as you type |
+| 🎵 **Ambient Sounds** | Rain, ocean, fireplace, forest, and wind loops with a volume control |
+| 🏈 **Live Sports** | Live NFL and NBA scores (via ESPN) |
+| 📈 **Markets** | Live stock and crypto quotes with sparklines (via Yahoo Finance) |
+| 🐙 **GitHub Activity** | Your notifications, pull requests, and assigned issues |
 
 ## Usage
 
-1. Click the Widget Dashboard icon in the activity bar
-2. Click "Edit" to enter edit mode
-3. Click "+ Add Widget" to add new widgets
-4. Click "Done" when finished editing
+1. Click the **Widget Dashboard** icon in the Activity Bar.
+2. Click **Add Widget** to open the gallery and pick a widget.
+3. Click **Edit** to drag widgets around, resize them, or remove them, then **Done**.
+
+The **GitHub Activity** widget asks you to sign in with GitHub the first time.
+It uses the least-privilege `read:user` and `notifications` scopes; your access
+token stays inside the extension host and is never exposed to the dashboard UI.
+
+## Privacy & network access
+
+This extension only talks to:
+
+- `site.api.espn.com` — public sports scores (Live Sports widget)
+- `query1.finance.yahoo.com` — public market quotes (Markets widget)
+- `api.github.com` — your GitHub activity, only after you sign in (GitHub widget)
+- `assets.mixkit.co` — ambient sound files (Ambient Sounds widget)
+
+No analytics, no tracking, no data leaves your machine beyond these requests.
 
 ## Development
 
-### Project Structure
-
-```
-vscode-widget-dashboard/
-├── src/
-│   ├── extension/          # VS Code extension code
-│   │   ├── extension.ts    # Main extension entry point
-│   │   └── DashboardPanel.ts
-│   ├── webview/            # React UI code
-│   │   ├── components/     # React components
-│   │   ├── widgets/        # Widget implementations
-│   │   ├── App.tsx
-│   │   ├── index.tsx
-│   │   └── styles.ts       # Global styles
-│   └── types/              # TypeScript types
-├── resources/              # Icons and assets
-├── dist/                   # Compiled output
-└── package.json
+```bash
+npm install
+npm run build      # one-off build
+npm run watch      # rebuild on change
+npm run icon       # regenerate the marketplace icon PNG
 ```
 
-### Building
+Press `F5` in VS Code to launch an Extension Development Host with the extension loaded.
 
-- `npm run build` - Build the extension once
-- `npm run watch` - Watch for changes and rebuild automatically
+### Project structure
 
-### Creating New Widgets
+```
+src/
+  extension/     # VS Code extension host (auth, network, state)
+  webview/       # React dashboard UI
+    components/  # Dashboard shell
+    widgets/     # Individual widgets
+resources/       # Icons
+scripts/         # Build helpers (icon generator)
+```
 
-To create a new widget:
+### Adding a widget
 
-1. Create a new file in `src/webview/widgets/YourWidget.tsx`
-2. Export a React component
-3. Add styling using className (styles are in `src/webview/styles.ts`)
-4. Register the widget in `Dashboard.tsx`
+1. Create `src/webview/widgets/YourWidget.tsx` and export a React component.
+2. Register it in `src/webview/components/Dashboard.tsx` (the `renderWidget`
+   switch and the gallery grid).
+3. Style it via `className` (styles live in `src/webview/styles.ts`).
 
 ## Roadmap
 
-- [ ] Drag-and-drop widget repositioning
-- [ ] Widget size customization (small, medium, large)
-- [ ] More built-in widgets:
-  - [ ] Pomodoro timer
-  - [ ] GitHub activity feed
-  - [ ] Ambient music player
-  - [ ] Weather widget
-  - [ ] Stock ticker
-  - [ ] Sports scores
-  - [ ] Calendar/events
-- [ ] Widget marketplace
-- [ ] Custom widget API for third-party developers
-- [ ] Widget settings and configuration
-- [ ] Export/import dashboard layouts
-
-## Technologies
-
-- **TypeScript** - Type-safe development
-- **React** - UI framework
-- **VS Code Extension API** - Integration with VS Code
-- **esbuild** - Fast bundling
+- [ ] Pomodoro timer widget
+- [ ] Weather widget
+- [ ] Calendar / events widget
+- [ ] Per-widget settings
+- [ ] Export / import dashboard layouts
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
+Contributions are welcome! Please open an issue or submit a pull request.

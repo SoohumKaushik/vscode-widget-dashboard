@@ -1,33 +1,35 @@
 import * as vscode from 'vscode';
 import * as https from 'https';
-import { DashboardPanel } from './DashboardPanel';
+
+// Least-privilege GitHub scopes: enough to read your notifications and search
+// your own PRs/issues, without the write access that the full `repo` scope grants.
+const GITHUB_SCOPES = ['read:user', 'notifications'];
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Widget Dashboard extension is now active!');
 
-    // Register command to open dashboard
-    const openDashboardCommand = vscode.commands.registerCommand(
-        'widgetDashboard.openDashboard',
-        () => {
-            DashboardPanel.createOrShow(context.extensionUri);
-        }
-    );
-
-    // Register command to add widget
-    const addWidgetCommand = vscode.commands.registerCommand(
-        'widgetDashboard.addWidget',
-        () => {
-            DashboardPanel.currentPanel?.addWidget();
-        }
-    );
-
-    // Register the webview view provider
+    // Register the webview view provider (the dashboard lives in the activity bar)
     const provider = new DashboardViewProvider(context.extensionUri, context);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             'widgetDashboard.mainView',
             provider
         )
+    );
+
+    // "Open Widget Dashboard" reveals the dashboard view in the activity bar.
+    const openDashboardCommand = vscode.commands.registerCommand(
+        'widgetDashboard.openDashboard',
+        () => vscode.commands.executeCommand('widgetDashboard.mainView.focus')
+    );
+
+    // "Add Widget" reveals the view, then opens its widget gallery.
+    const addWidgetCommand = vscode.commands.registerCommand(
+        'widgetDashboard.addWidget',
+        async () => {
+            await vscode.commands.executeCommand('widgetDashboard.mainView.focus');
+            provider.openAddMenu();
+        }
     );
 
     context.subscriptions.push(openDashboardCommand, addWidgetCommand);
@@ -96,12 +98,13 @@ class DashboardViewProvider implements vscode.WebviewViewProvider {
                     });
                     break;
                 case 'getGitHubAuth':
-                    // Get GitHub authentication
+                    // Get GitHub authentication. The access token stays in the
+                    // extension host and is never sent to the webview — the webview
+                    // only needs to know that sign-in succeeded.
                     try {
-                        const session = await vscode.authentication.getSession('github', ['repo', 'read:user', 'notifications'], { createIfNone: true });
+                        const session = await vscode.authentication.getSession('github', GITHUB_SCOPES, { createIfNone: true });
                         webviewView.webview.postMessage({
                             type: 'githubAuth',
-                            token: session.accessToken,
                             username: session.account.label
                         });
                     } catch (error) {
@@ -114,7 +117,7 @@ class DashboardViewProvider implements vscode.WebviewViewProvider {
                 case 'fetchGitHubData':
                     // Fetch GitHub data using the token
                     try {
-                        const session = await vscode.authentication.getSession('github', ['repo', 'read:user', 'notifications'], { createIfNone: false });
+                        const session = await vscode.authentication.getSession('github', GITHUB_SCOPES, { createIfNone: false });
                         if (!session) {
                             webviewView.webview.postMessage({
                                 type: 'githubDataError',
@@ -153,8 +156,45 @@ class DashboardViewProvider implements vscode.WebviewViewProvider {
                         });
                     }
                     break;
+                case 'fetchStockData':
+                    // Fetch real quotes from Yahoo Finance in the extension host
+                    // (Node has no CORS restriction, unlike the webview).
+                    try {
+                        const symbols: string[] = data.symbols || [];
+                        const results = await Promise.all(symbols.map(async (symbol: string) => {
+                            try {
+                                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=5m&range=1d`;
+                                const json = await httpsGet(url, { 'User-Agent': 'VSCode-Widget-Dashboard' });
+                                const result = json?.chart?.result?.[0];
+                                if (!result) {
+                                    return { symbol, error: true };
+                                }
+                                const meta = result.meta || {};
+                                const closes = ((result.indicators?.quote?.[0]?.close) || [])
+                                    .filter((v: any) => typeof v === 'number');
+                                const price = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
+                                const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? closes[0] ?? null;
+                                return { symbol, price, prevClose, sparkline: closes.slice(-30) };
+                            } catch (e) {
+                                return { symbol, error: true };
+                            }
+                        }));
+                        webviewView.webview.postMessage({ type: 'stockData', data: results });
+                    } catch (error) {
+                        console.error('Stock API error:', error);
+                        webviewView.webview.postMessage({
+                            type: 'stockDataError',
+                            error: 'Failed to fetch market data'
+                        });
+                    }
+                    break;
             }
         });
+    }
+
+    /** Ask the webview to open its "Add Widget" gallery. */
+    public openAddMenu() {
+        this._view?.webview.postMessage({ type: 'openAddMenu' });
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
@@ -169,7 +209,7 @@ class DashboardViewProvider implements vscode.WebviewViewProvider {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; media-src https: http:; img-src ${webview.cspSource} https:; connect-src https://site.api.espn.com https://query1.finance.yahoo.com;">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; media-src https: http:; img-src ${webview.cspSource} https:; connect-src https://site.api.espn.com;">
                 <title>Widget Dashboard</title>
                 <style>
                     html, body {

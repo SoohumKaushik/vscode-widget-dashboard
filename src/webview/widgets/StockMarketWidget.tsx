@@ -12,32 +12,24 @@ interface Stock {
 type WidgetSize = 'compact' | 'normal' | 'expanded';
 
 const POPULAR_STOCKS = [
-    { symbol: 'AAPL', name: 'Apple', basePrice: 178.50 },
-    { symbol: 'MSFT', name: 'Microsoft', basePrice: 425.30 },
-    { symbol: 'GOOGL', name: 'Google', basePrice: 142.80 },
-    { symbol: 'TSLA', name: 'Tesla', basePrice: 248.90 },
-    { symbol: 'NVDA', name: 'NVIDIA', basePrice: 875.20 },
-    { symbol: 'BTC-USD', name: 'Bitcoin', basePrice: 62500.00 },
-    { symbol: 'ETH-USD', name: 'Ethereum', basePrice: 3200.00 },
+    { symbol: 'AAPL', name: 'Apple' },
+    { symbol: 'MSFT', name: 'Microsoft' },
+    { symbol: 'GOOGL', name: 'Google' },
+    { symbol: 'TSLA', name: 'Tesla' },
+    { symbol: 'NVDA', name: 'NVIDIA' },
+    { symbol: 'BTC-USD', name: 'Bitcoin' },
+    { symbol: 'ETH-USD', name: 'Ethereum' },
 ];
 
-// Generate realistic price movements
-const generatePriceData = (basePrice: number, volatility: number = 0.02) => {
-    const points = 20;
-    const data: number[] = [];
-    let currentPrice = basePrice;
+const NAME_BY_SYMBOL: { [symbol: string]: string } = Object.fromEntries(
+    POPULAR_STOCKS.map((s) => [s.symbol, s.name])
+);
 
-    for (let i = 0; i < points; i++) {
-        // Random walk with slight upward/downward bias
-        const change = (Math.random() - 0.5) * basePrice * volatility;
-        currentPrice += change;
-        data.push(currentPrice);
-    }
-
-    return data;
-};
+const REFRESH_MS = 60000; // real quotes — refresh once a minute
 
 export const StockMarketWidget: React.FC = () => {
+    // Quotes are fetched by the extension host (no CORS limits) and posted back.
+    const vscode = (window as any).vscode;
     const [stocks, setStocks] = useState<Stock[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -46,56 +38,57 @@ export const StockMarketWidget: React.FC = () => {
     const [, setTick] = useState(0);
     const [widgetSize, setWidgetSize] = useState<WidgetSize>('normal');
 
-    const fetchStockData = async () => {
-        try {
-            setIsRefreshing(true);
-            const stockData: Stock[] = [];
-
-            for (const stock of POPULAR_STOCKS) {
-                // Generate realistic simulated data
-                const volatility = stock.symbol.includes('-USD') ? 0.03 : 0.015; // Crypto more volatile
-                const sparkline = generatePriceData(stock.basePrice, volatility);
-                const currentPrice = sparkline[sparkline.length - 1];
-                const previousClose = stock.basePrice;
-                const change = currentPrice - previousClose;
-                const changePercent = (change / previousClose) * 100;
-
-                stockData.push({
-                    symbol: stock.symbol,
-                    name: stock.name,
-                    price: currentPrice,
-                    change: change,
-                    changePercent: changePercent,
-                    sparkline: sparkline
-                });
-            }
-
-            setStocks(stockData);
-            setError(null);
-            setLastUpdate(new Date());
-        } catch (err) {
-            setError('Failed to generate stock data');
-            console.error('Stock data error:', err);
-        } finally {
-            setLoading(false);
-            setIsRefreshing(false);
-        }
+    const fetchStockData = () => {
+        setIsRefreshing(true);
+        vscode.postMessage({
+            type: 'fetchStockData',
+            symbols: POPULAR_STOCKS.map((s) => s.symbol),
+        });
     };
 
     useEffect(() => {
+        const messageHandler = (event: MessageEvent) => {
+            const message = event.data;
+
+            if (message.type === 'stockData') {
+                const parsed: Stock[] = (message.data || [])
+                    .filter((item: any) => !item.error && item.price != null && item.prevClose != null)
+                    .map((item: any) => {
+                        const price = item.price;
+                        const prevClose = item.prevClose;
+                        const change = price - prevClose;
+                        const changePercent = prevClose ? (change / prevClose) * 100 : 0;
+                        return {
+                            symbol: item.symbol,
+                            name: NAME_BY_SYMBOL[item.symbol] || item.symbol,
+                            price,
+                            change,
+                            changePercent,
+                            sparkline: item.sparkline || [],
+                        };
+                    });
+
+                setStocks(parsed);
+                setError(parsed.length === 0 ? 'No market data available' : null);
+                setLastUpdate(new Date());
+                setLoading(false);
+                setIsRefreshing(false);
+            } else if (message.type === 'stockDataError') {
+                setError(message.error || 'Failed to load market data');
+                setLoading(false);
+                setIsRefreshing(false);
+            }
+        };
+
+        window.addEventListener('message', messageHandler);
         fetchStockData();
 
-        // Auto-refresh every 10 seconds for demo (simulates live updates)
-        const refreshInterval = setInterval(() => {
-            fetchStockData();
-        }, 10000);
-
-        // Update timer every second
-        const tickInterval = setInterval(() => {
-            setTick(prev => prev + 1);
-        }, 1000);
+        const refreshInterval = setInterval(fetchStockData, REFRESH_MS);
+        // Update the "updated Ns ago" label periodically (no need for every second).
+        const tickInterval = setInterval(() => setTick((prev) => prev + 1), 15000);
 
         return () => {
+            window.removeEventListener('message', messageHandler);
             clearInterval(refreshInterval);
             clearInterval(tickInterval);
         };
@@ -214,4 +207,3 @@ export const StockMarketWidget: React.FC = () => {
         </div>
     );
 };
-

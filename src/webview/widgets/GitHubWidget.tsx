@@ -37,57 +37,6 @@ interface Issue {
 type ViewMode = 'notifications' | 'prs' | 'issues';
 type WidgetSize = 'compact' | 'normal' | 'expanded';
 
-// Simulated data generators
-const generateNotifications = (): Notification[] => {
-    const types: Array<'pr' | 'issue' | 'mention' | 'review'> = ['pr', 'issue', 'mention', 'review'];
-    const statuses: Array<'open' | 'merged' | 'closed'> = ['open', 'merged', 'closed'];
-    const repos = ['user/awesome-project', 'company/main-app', 'team/backend-api'];
-    
-    return Array.from({ length: 8 }, (_, i) => ({
-        id: `notif-${i}`,
-        type: types[Math.floor(Math.random() * types.length)],
-        title: `${types[i % types.length] === 'pr' ? 'PR' : 'Issue'}: Fix critical bug in authentication`,
-        repo: repos[i % repos.length],
-        number: 100 + i,
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        updatedAt: new Date(Date.now() - Math.random() * 86400000 * 7),
-        unread: Math.random() > 0.5
-    }));
-};
-
-const generatePullRequests = (): PullRequest[] => {
-    const statuses: Array<'open' | 'merged' | 'closed' | 'draft'> = ['open', 'merged', 'closed', 'draft'];
-    const repos = ['user/awesome-project', 'company/main-app', 'team/backend-api'];
-    
-    return Array.from({ length: 6 }, (_, i) => ({
-        id: `pr-${i}`,
-        title: `Add new feature for user dashboard`,
-        repo: repos[i % repos.length],
-        number: 200 + i,
-        status: statuses[i % statuses.length],
-        author: 'you',
-        updatedAt: new Date(Date.now() - Math.random() * 86400000 * 3),
-        reviews: Math.floor(Math.random() * 5),
-        comments: Math.floor(Math.random() * 10)
-    }));
-};
-
-const generateIssues = (): Issue[] => {
-    const repos = ['user/awesome-project', 'company/main-app', 'team/backend-api'];
-    const labels = [['bug', 'high-priority'], ['feature'], ['documentation'], ['enhancement']];
-    
-    return Array.from({ length: 5 }, (_, i) => ({
-        id: `issue-${i}`,
-        title: `Implement user authentication flow`,
-        repo: repos[i % repos.length],
-        number: 300 + i,
-        status: i % 3 === 0 ? 'closed' : 'open',
-        assignee: 'you',
-        labels: labels[i % labels.length],
-        updatedAt: new Date(Date.now() - Math.random() * 86400000 * 5)
-    }));
-};
-
 export const GitHubWidget: React.FC = () => {
     // Get vscode API from window (set by Dashboard)
     const vscode = (window as any).vscode;
@@ -162,7 +111,8 @@ export const GitHubWidget: React.FC = () => {
                                 pr.draft ? 'draft' : pr.state || 'open',
                         author: pr.user?.login || 'unknown',
                         updatedAt: new Date(pr.updated_at),
-                        reviews: pr.comments || 0,
+                        // The issue-search API doesn't return a review count.
+                        reviews: 0,
                         comments: pr.comments || 0
                     };
                 });
@@ -205,10 +155,10 @@ export const GitHubWidget: React.FC = () => {
             }
         }, 60000);
 
-        // Update timer every second
+        // Refresh the "time ago" labels periodically (no need for every second).
         const tickInterval = setInterval(() => {
             setTick(prev => prev + 1);
-        }, 1000);
+        }, 15000);
 
         return () => {
             window.removeEventListener('message', messageHandler);
@@ -373,7 +323,6 @@ export const GitHubWidget: React.FC = () => {
                                     <span className="pr-time">{getTimeAgo(pr.updatedAt)}</span>
                                 </div>
                                 <div className="pr-stats">
-                                    <span className="pr-stat">👁️ {pr.reviews}</span>
                                     <span className="pr-stat">💬 {pr.comments}</span>
                                     <span className="pr-status-text" style={{ color: getStatusColor(pr.status) }}>
                                         {pr.status}
