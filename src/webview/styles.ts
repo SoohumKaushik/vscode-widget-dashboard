@@ -25,6 +25,8 @@ body {
 .dashboard {
     padding: 16px;
     width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
     box-sizing: border-box;
 }
 
@@ -357,70 +359,21 @@ body {
     text-align: center;
 }
 
+/* Widgets stack in a single column. The column is capped so the dashboard
+   keeps its sidebar layout even when the view is dragged wide or moved into
+   the panel / editor area. */
 .widget-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-    grid-auto-rows: 200px;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    padding: 16px;
     width: 100%;
-    /* Remove dense packing to prevent overlaps */
-    grid-auto-flow: row;
-    /* Ensure grid can accommodate all widget sizes */
-    min-height: min-content;
-    /* Default to 2 columns, will be updated by JS */
-    --grid-columns: 2;
 }
 
-/* Widget Sizes for Bento Grid */
-.widget-size-small {
-    grid-column: span 1;
-    grid-row: span 1;
-    /* Prevent overflow */
-    max-width: 100%;
-    overflow: hidden;
-    contain: layout style paint;
-}
-
-.widget-size-medium {
-    grid-column: span 1;
-    grid-row: span 2;
-    max-width: 100%;
-    overflow: hidden;
-    contain: layout style paint;
-}
-
-.widget-size-large {
-    /* Limit to available columns, max 2 */
-    grid-column: span clamp(1, 2, var(--grid-columns, 2));
-    grid-row: span 2;
-    max-width: 100%;
-    overflow: hidden;
-    contain: layout style paint;
-}
-
-.widget-size-wide {
-    /* Limit to available columns, max 2 */
-    grid-column: span clamp(1, 2, var(--grid-columns, 2));
-    grid-row: span 1;
-    max-width: 100%;
-    overflow: hidden;
-    contain: layout style paint;
-}
-
-.widget-size-tall {
-    grid-column: span 1;
-    grid-row: span 3;
-    max-width: 100%;
-    overflow: hidden;
-    contain: layout style paint;
-}
-
-/* Prevent grid blowout - ensure widgets never exceed grid bounds */
-.widget-container {
-    min-width: 0;
-    min-height: 0;
-    box-sizing: border-box;
+.edit-hint {
+    margin: -12px 0 12px;
+    font-size: 12px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
 }
 
 /* Drag and Drop States */
@@ -430,8 +383,9 @@ body {
 }
 
 .widget-container.drag-over {
-    border: 2px dashed rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.05);
+    outline: 2px dashed rgba(255, 255, 255, 0.5);
+    outline-offset: 4px;
+    border-radius: 16px;
 }
 
 .edit-mode .widget-container {
@@ -442,99 +396,14 @@ body {
     cursor: grabbing;
 }
 
-/* Widget Size Controls */
-.widget-size-controls {
-    position: absolute;
-    bottom: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 4px;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 6px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    z-index: 10;
-}
-
-.size-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.size-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-}
-
-.size-btn.active {
-    background: rgba(59, 130, 246, 0.8);
-    border-color: rgba(59, 130, 246, 1);
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
-}
-
-/* Responsive breakpoints for different sidebar widths */
-
-/* Very narrow sidebar (< 300px) - Single column, compact */
-@media (max-width: 300px) {
+/* Narrow sidebar - tighten spacing */
+@media (max-width: 400px) {
     .widget-grid {
-        grid-template-columns: 1fr;
-        grid-auto-rows: auto;
-        gap: 8px;
-        padding: 8px;
-        --grid-columns: 1;
-    }
-
-    .dashboard {
-        padding: 6px;
-    }
-
-    .dashboard-title {
-        font-size: 16px;
-    }
-
-    .dashboard-header {
-        margin-bottom: 8px;
-        padding-bottom: 6px;
-    }
-
-    /* Force all widgets to single column */
-    .widget-size-small,
-    .widget-size-medium,
-    .widget-size-large,
-    .widget-size-wide,
-    .widget-size-tall {
-        grid-column: 1 / -1 !important;
-        grid-row: auto !important;
-        min-height: 180px;
-    }
-}
-
-/* Narrow sidebar (300px - 400px) - Single column */
-@media (min-width: 301px) and (max-width: 400px) {
-    .widget-grid {
-        grid-template-columns: 1fr;
-        grid-auto-rows: auto;
         gap: 10px;
-        padding: 10px;
-        --grid-columns: 1;
     }
 
     .dashboard {
-        padding: 8px;
+        padding: 10px;
     }
 
     .dashboard-title {
@@ -542,160 +411,8 @@ body {
     }
 
     .dashboard-header {
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         padding-bottom: 8px;
-    }
-
-    /* Force all widgets to single column */
-    .widget-size-small,
-    .widget-size-medium,
-    .widget-size-large,
-    .widget-size-wide,
-    .widget-size-tall {
-        grid-column: 1 / -1 !important;
-        grid-row: auto !important;
-        min-height: 200px;
-    }
-}
-
-/* Medium-narrow sidebar (401px - 500px) - Single column, more breathing room */
-@media (min-width: 401px) and (max-width: 500px) {
-    .widget-grid {
-        grid-template-columns: 1fr;
-        grid-auto-rows: auto;
-        gap: 12px;
-        padding: 12px;
-        --grid-columns: 1;
-    }
-
-    /* Force all widgets to single column */
-    .widget-size-small,
-    .widget-size-medium,
-    .widget-size-large,
-    .widget-size-wide,
-    .widget-size-tall {
-        grid-column: 1 / -1 !important;
-        grid-row: auto !important;
-    }
-
-    .widget-size-small {
-        min-height: 180px;
-    }
-
-    .widget-size-medium,
-    .widget-size-tall {
-        min-height: 250px;
-    }
-
-    .widget-size-large,
-    .widget-size-wide {
-        min-height: 220px;
-    }
-}
-
-/* Medium sidebar (501px - 650px) - Can fit 2 small widgets side by side */
-@media (min-width: 501px) and (max-width: 650px) {
-    .widget-grid {
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-        grid-auto-rows: 180px;
-        gap: 12px;
-        --grid-columns: 2;
-    }
-
-    /* Allow 2-column spans only if grid has 2+ columns */
-    .widget-size-small {
-        grid-column: span 1;
-        grid-row: span 1;
-    }
-
-    .widget-size-medium {
-        grid-column: span 1;
-        grid-row: span 2;
-    }
-
-    .widget-size-large {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 2;
-    }
-
-    .widget-size-wide {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 1;
-    }
-
-    .widget-size-tall {
-        grid-column: span 1;
-        grid-row: span 2;
-    }
-}
-
-/* Medium-wide sidebar (651px - 800px) - 2 columns comfortable */
-@media (min-width: 651px) and (max-width: 800px) {
-    .widget-grid {
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
-        grid-auto-rows: 200px;
-        gap: 14px;
-        --grid-columns: 2;
-    }
-
-    .widget-size-small {
-        grid-column: span 1;
-        grid-row: span 1;
-    }
-
-    .widget-size-medium {
-        grid-column: span 1;
-        grid-row: span 2;
-    }
-
-    .widget-size-large {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 2;
-    }
-
-    .widget-size-wide {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 1;
-    }
-
-    .widget-size-tall {
-        grid-column: span 1;
-        grid-row: span 2;
-    }
-}
-
-/* Wide sidebar (801px+) - Full bento grid layout */
-@media (min-width: 801px) {
-    .widget-grid {
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-        grid-auto-rows: 200px;
-        gap: 16px;
-        --grid-columns: 3;
-    }
-
-    .widget-size-small {
-        grid-column: span 1;
-        grid-row: span 1;
-    }
-
-    .widget-size-medium {
-        grid-column: span 1;
-        grid-row: span 2;
-    }
-
-    .widget-size-large {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 2;
-    }
-
-    .widget-size-wide {
-        grid-column: span min(2, var(--grid-columns, 2));
-        grid-row: span 1;
-    }
-
-    .widget-size-tall {
-        grid-column: span 1;
-        grid-row: span 3;
     }
 }
 
@@ -802,37 +519,6 @@ body {
     font-weight: 500;
     opacity: 0.9;
     letter-spacing: 0.3px;
-}
-
-/* Welcome Widget */
-.welcome-widget {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    min-height: 180px;
-    padding: 12px;
-}
-
-.welcome-greeting {
-    font-size: clamp(20px, 6vw, 32px);
-    font-weight: 700;
-    margin-bottom: 12px;
-    letter-spacing: -0.5px;
-    word-wrap: break-word;
-}
-
-.welcome-quote {
-    font-size: clamp(11px, 2.5vw, 14px);
-    font-weight: 400;
-    line-height: 1.5;
-    opacity: 0.9;
-    font-style: italic;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    word-wrap: break-word;
 }
 
 .remove-widget-btn {
@@ -1124,18 +810,6 @@ body {
     transition: all 0.3s ease;
 }
 
-.live-sports-widget.size-compact {
-    min-height: 200px;
-}
-
-.live-sports-widget.size-normal {
-    min-height: 300px;
-}
-
-.live-sports-widget.size-expanded {
-    min-height: 400px;
-}
-
 .sports-header {
     margin-bottom: 12px;
 }
@@ -1157,31 +831,6 @@ body {
     display: flex;
     gap: 6px;
     align-items: center;
-}
-
-.size-toggle-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    width: clamp(28px, 7vw, 32px);
-    height: clamp(28px, 7vw, 32px);
-    font-size: clamp(14px, 3.5vw, 16px);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-}
-
-.size-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-}
-
-.size-toggle-btn:active {
-    transform: scale(0.95);
 }
 
 .refresh-btn {
@@ -1291,18 +940,6 @@ body {
     background: rgba(255, 255, 255, 0.4);
 }
 
-.size-compact .games-container {
-    max-height: 180px;
-}
-
-.size-normal .games-container {
-    max-height: 320px;
-}
-
-.size-expanded .games-container {
-    max-height: 600px;
-}
-
 .game-card {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1400,42 +1037,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 400px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 4px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-    transition: max-height 0.3s ease;
-}
-
-.size-compact .stocks-container {
-    max-height: 180px;
-}
-
-.size-normal .stocks-container {
-    max-height: 320px;
-}
-
-.size-expanded .stocks-container {
-    max-height: 600px;
-}
-
-.stocks-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.stocks-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.stocks-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
-}
-
-.stocks-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
 }
 
 .stock-card {
@@ -1456,6 +1057,7 @@ body {
 
 .stock-info {
     flex: 1;
+    min-width: 0;
 }
 
 .stock-name-row {
@@ -1478,8 +1080,9 @@ body {
 
 .stock-price-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
+    gap: 4px 8px;
 }
 
 .stock-price {
@@ -1506,6 +1109,7 @@ body {
 
 .stock-chart {
     margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .sparkline {
@@ -1518,6 +1122,20 @@ body {
 
 .stock-chart.negative polyline {
     stroke: #f87171;
+}
+
+/* Dashed line at the price the change is measured from */
+.sparkline-baseline {
+    stroke: rgba(255, 255, 255, 0.25);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+}
+
+.stock-source {
+    margin-top: 10px;
+    font-size: 10px;
+    text-align: center;
+    opacity: 0.45;
 }
 
 /* GitHub Widget */
@@ -1612,18 +1230,6 @@ body {
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     transition: max-height 0.3s ease;
-}
-
-.size-compact .github-content {
-    max-height: 200px;
-}
-
-.size-normal .github-content {
-    max-height: 350px;
-}
-
-.size-expanded .github-content {
-    max-height: 600px;
 }
 
 .github-content::-webkit-scrollbar {
@@ -2013,18 +1619,6 @@ body {
         max-height: 250px;
     }
 
-    .size-compact .github-content {
-        max-height: 150px;
-    }
-
-    .size-normal .github-content {
-        max-height: 250px;
-    }
-
-    .size-expanded .github-content {
-        max-height: 400px;
-    }
-
     .time-digit,
     .time-separator {
         font-size: 28px;
@@ -2038,8 +1632,7 @@ body {
         font-size: 11px;
     }
 
-    .clock-widget,
-    .welcome-widget {
+    .clock-widget {
         min-height: 150px;
         padding: 10px;
     }
@@ -2086,18 +1679,6 @@ body {
         max-height: 300px;
     }
 
-    .size-compact .github-content {
-        max-height: 180px;
-    }
-
-    .size-normal .github-content {
-        max-height: 300px;
-    }
-
-    .size-expanded .github-content {
-        max-height: 500px;
-    }
-
     .time-digit,
     .time-separator {
         font-size: 32px;
@@ -2111,8 +1692,7 @@ body {
         font-size: 12px;
     }
 
-    .clock-widget,
-    .welcome-widget {
+    .clock-widget {
         min-height: 160px;
     }
 }
@@ -2129,8 +1709,7 @@ body {
         max-width: 120px;
     }
 
-    .clock-widget,
-    .welcome-widget {
+    .clock-widget {
         min-height: 170px;
     }
 }

@@ -37,21 +37,93 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {}
 
-// Helper function to make HTTPS requests
-function httpsGet(url: string, headers: any): Promise<any> {
+// GET a URL and parse the JSON body. Rejects on HTTP errors and on timeouts so
+// a slow or rate-limited API can't leave a widget stuck in its loading state.
+function httpsGet(url: string, headers: Record<string, string>, timeoutMs = 10000): Promise<any> {
     return new Promise((resolve, reject) => {
-        https.get(url, { headers }, (res) => {
+        const req = https.get(url, { headers }, (res) => {
             let data = '';
             res.on('data', (chunk) => data += chunk);
             res.on('end', () => {
+                if (res.statusCode && res.statusCode >= 400) {
+                    reject(new Error(`HTTP ${res.statusCode} from ${new URL(url).host}`));
+                    return;
+                }
                 try {
                     resolve(JSON.parse(data));
                 } catch (e) {
                     reject(e);
                 }
             });
-        }).on('error', reject);
+        });
+        req.setTimeout(timeoutMs, () => req.destroy(new Error(`Request to ${new URL(url).host} timed out`)));
+        req.on('error', reject);
     });
+}
+
+interface Quote {
+    symbol: string;
+    price: number;
+    /** Change vs. the previous close (stocks) or vs. 24 hours ago (crypto). */
+    changePercent: number;
+    /** The price that `changePercent` is measured from. */
+    baseline: number;
+    /** Intraday prices for the sparkline, oldest first. */
+    sparkline: number[];
+    /** False when the symbol's exchange is outside regular trading hours. */
+    marketOpen: boolean;
+}
+
+// Fetch a quote from Yahoo Finance's public chart endpoint (no API key needed).
+async function fetchQuote(symbol: string): Promise<Quote> {
+    // Crypto trades 24/7, so use a rolling 24h window (what exchanges and Yahoo's
+    // own quote page show) rather than "since midnight UTC".
+    const isCrypto = symbol.endsWith('-USD');
+    const query = isCrypto ? 'interval=15m&range=2d' : 'interval=5m&range=1d';
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${query}`;
+    const json = await httpsGet(url, { 'User-Agent': 'VSCode-Widget-Dashboard' });
+
+    const result = json?.chart?.result?.[0];
+    if (!result) {
+        throw new Error(`No chart data for ${symbol}`);
+    }
+    const meta = result.meta || {};
+    const timestamps: number[] = result.timestamp || [];
+    const rawCloses: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
+
+    const nowSec = Date.now() / 1000;
+    const since = isCrypto ? nowSec - 24 * 60 * 60 : 0;
+    const sparkline = rawCloses.filter(
+        (v, i): v is number => typeof v === 'number' && (timestamps[i] ?? 0) >= since
+    );
+
+    const price: number | undefined = meta.regularMarketPrice ?? sparkline[sparkline.length - 1];
+    if (typeof price !== 'number') {
+        throw new Error(`No price for ${symbol}`);
+    }
+
+    let changePercent: number;
+    if (isCrypto) {
+        // Yahoo reports the 24h change directly; fall back to the window start.
+        changePercent = typeof meta.regularMarketChangePercent === 'number'
+            ? meta.regularMarketChangePercent
+            : (sparkline.length ? (price / sparkline[0] - 1) * 100 : 0);
+    } else {
+        const prevClose = meta.previousClose ?? meta.chartPreviousClose;
+        changePercent = prevClose ? (price / prevClose - 1) * 100 : 0;
+    }
+
+    const regular = meta.currentTradingPeriod?.regular;
+    const marketOpen = isCrypto || (regular ? nowSec >= regular.start && nowSec < regular.end : false);
+
+    return {
+        symbol,
+        price,
+        changePercent,
+        baseline: price / (1 + changePercent / 100),
+        sparkline,
+        marketOpen,
+    };
 }
 
 class DashboardViewProvider implements vscode.WebviewViewProvider {
@@ -156,38 +228,28 @@ class DashboardViewProvider implements vscode.WebviewViewProvider {
                         });
                     }
                     break;
-                case 'fetchStockData':
-                    // Fetch real quotes from Yahoo Finance in the extension host
-                    // (Node has no CORS restriction, unlike the webview).
-                    try {
-                        const symbols: string[] = data.symbols || [];
-                        const results = await Promise.all(symbols.map(async (symbol: string) => {
-                            try {
-                                const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=5m&range=1d`;
-                                const json = await httpsGet(url, { 'User-Agent': 'VSCode-Widget-Dashboard' });
-                                const result = json?.chart?.result?.[0];
-                                if (!result) {
-                                    return { symbol, error: true };
-                                }
-                                const meta = result.meta || {};
-                                const closes = ((result.indicators?.quote?.[0]?.close) || [])
-                                    .filter((v: any) => typeof v === 'number');
-                                const price = meta.regularMarketPrice ?? closes[closes.length - 1] ?? null;
-                                const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? closes[0] ?? null;
-                                return { symbol, price, prevClose, sparkline: closes.slice(-30) };
-                            } catch (e) {
-                                return { symbol, error: true };
-                            }
-                        }));
-                        webviewView.webview.postMessage({ type: 'stockData', data: results });
-                    } catch (error) {
-                        console.error('Stock API error:', error);
+                case 'fetchStockData': {
+                    // Fetched in the extension host because the webview's CSP and
+                    // CORS rules block direct calls to Yahoo Finance.
+                    const symbols: string[] = Array.isArray(data.symbols) ? data.symbols : [];
+                    const results = await Promise.all(symbols.map(async (symbol) => {
+                        try {
+                            return await fetchQuote(symbol);
+                        } catch (error) {
+                            console.error(`Quote error for ${symbol}:`, error);
+                            return { symbol, error: true };
+                        }
+                    }));
+                    if (results.every((r) => 'error' in r)) {
                         webviewView.webview.postMessage({
                             type: 'stockDataError',
-                            error: 'Failed to fetch market data'
+                            error: 'Could not reach Yahoo Finance'
                         });
+                    } else {
+                        webviewView.webview.postMessage({ type: 'stockData', data: results });
                     }
                     break;
+                }
             }
         });
     }

@@ -19,6 +19,9 @@ const webviewConfig = {
   format: 'iife',
   platform: 'browser',
   sourcemap: true,
+  // Release builds use React's production bundle; watch mode keeps dev warnings.
+  minify: !watch,
+  define: { 'process.env.NODE_ENV': watch ? '"development"' : '"production"' },
   loader: {
     '.css': 'css',
   },

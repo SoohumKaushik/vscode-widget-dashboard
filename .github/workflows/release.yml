@@ -1,11 +1,14 @@
 name: Release
 
 # Publishes to the VS Code Marketplace when you push a version tag, e.g.:
-#   git tag v0.1.0 && git push origin v0.1.0
+#   git tag v1.2.0 && git push origin v1.2.0
 #
 # One-time setup: add your Azure DevOps Personal Access Token (Marketplace >
-# Manage scope) as a repository secret named VSCE_PAT.
-# Settings > Secrets and variables > Actions > New repository secret.
+# Manage scope) as a repository secret named VSCE_PAT:
+#   gh secret set VSCE_PAT
+# Without it, the workflow still builds the .vsix and attaches it to a GitHub
+# Release, but skips the Marketplace publish. Add the secret and re-run the
+# workflow to publish; re-running is safe.
 
 on:
   push:
@@ -45,11 +48,21 @@ jobs:
         run: npm run package
 
       - name: Publish to VS Code Marketplace
-        run: npx --yes @vscode/vsce publish --no-dependencies -p "$VSCE_PAT"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "::warning::VSCE_PAT secret is not set; skipping the Marketplace publish. Upload the .vsix from the GitHub Release manually, or add the secret and re-run this workflow."
+            exit 0
+          fi
+          npx --yes @vscode/vsce publish --no-dependencies --packagePath ./*.vsix -p "$VSCE_PAT"
 
       - name: Create GitHub Release with the .vsix attached
-        run: gh release create "$GITHUB_REF_NAME" ./*.vsix --title "$GITHUB_REF_NAME" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ./*.vsix --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ./*.vsix --title "$GITHUB_REF_NAME" --generate-notes
+          fi

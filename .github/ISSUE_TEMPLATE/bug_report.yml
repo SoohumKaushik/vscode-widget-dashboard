@@ -1,0 +1,58 @@
+name: Bug report
+description: Something isn't working the way it should
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect to see instead? Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add the Markets widget
+        2. Click Edit
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: widget
+    attributes:
+      label: Which widget?
+      options:
+        - Dashboard / layout
+        - Clock
+        - Markets
+        - Live Sports
+        - GitHub Activity
+        - Quick Notes
+        - Ambient Sounds
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version
+      description: Shown on the extension's page in the Extensions view.
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code version and OS
+      description: "Help > About (or Code > About Visual Studio Code on macOS)"
+      placeholder: "1.105.0 on macOS 15"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Errors or logs
+      description: 'Anything relevant from "Developer: Open Webview Developer Tools" or the Extension Host output.'
+      render: text

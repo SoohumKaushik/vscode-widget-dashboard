@@ -1,0 +1,22 @@
+name: Feature or widget request
+description: Suggest a new widget or an improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like?
+      description: Describe the widget or feature, and what problem it solves for you.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Data sources, mockups, or similar tools you like. If it needs a new API, mention whether that API needs a key.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to work on this myself

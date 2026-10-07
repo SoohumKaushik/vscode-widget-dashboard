@@ -6,12 +6,6 @@ import { LiveSportsWidget } from '../widgets/LiveSportsWidget';
 import { StockMarketWidget } from '../widgets/StockMarketWidget';
 import { GitHubWidget } from '../widgets/GitHubWidget';
 
-interface DashboardProps {
-    widgets: any[];
-    onAddWidget: (type: string) => void;
-    onRemoveWidget: (id: string) => void;
-}
-
 declare const acquireVsCodeApi: any;
 const vscode = acquireVsCodeApi();
 // Store on window for other components to access
@@ -20,11 +14,10 @@ const vscode = acquireVsCodeApi();
 interface Widget {
     id: string;
     type: string;
-    size: 'small' | 'medium' | 'large' | 'wide' | 'tall';
     order: number;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRemoveWidget }) => {
+export const Dashboard: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [notesData, setNotesData] = useState<{[key: string]: string}>({});
     const [showAddMenu, setShowAddMenu] = useState(false);
@@ -32,7 +25,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
     const [isStateLoaded, setIsStateLoaded] = useState(false);
     const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
     const [dragOverWidget, setDragOverWidget] = useState<string | null>(null);
-    const [gridRef, setGridRef] = useState<HTMLDivElement | null>(null);
 
     // Load state on mount
     useEffect(() => {
@@ -48,11 +40,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
             }
             if (message.type === 'setState' && message.state) {
                 if (message.state.widgets && message.state.widgets.length > 0) {
-                    // Ensure all widgets have required fields
+                    // Ensure all widgets have required fields (older versions also
+                    // stored a per-widget `size`, which is no longer used)
                     const migratedWidgets = message.state.widgets.map((w: any, index: number) => ({
                         id: w.id,
                         type: w.type,
-                        size: w.size || 'medium',
                         order: w.order !== undefined ? w.order : index
                     }));
                     setUserWidgets(migratedWidgets);
@@ -61,7 +53,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
                     setUserWidgets([{
                         id: 'default-clock',
                         type: 'clock',
-                        size: 'medium',
                         order: 0
                     }]);
                 }
@@ -75,31 +66,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
         window.addEventListener('message', messageHandler);
         return () => window.removeEventListener('message', messageHandler);
     }, []);
-
-    // Calculate and set grid columns dynamically
-    useEffect(() => {
-        if (!gridRef) return;
-
-        const updateGridColumns = () => {
-            const gridWidth = gridRef.offsetWidth;
-            const gap = 16;
-            const minColWidth = 280;
-
-            // Calculate how many columns can fit
-            const columns = Math.max(1, Math.floor((gridWidth + gap) / (minColWidth + gap)));
-
-            // Set CSS variable for grid columns
-            gridRef.style.setProperty('--grid-columns', columns.toString());
-        };
-
-        // Update on mount and resize
-        updateGridColumns();
-
-        const resizeObserver = new ResizeObserver(updateGridColumns);
-        resizeObserver.observe(gridRef);
-
-        return () => resizeObserver.disconnect();
-    }, [gridRef]);
 
     // Save state whenever it changes
     useEffect(() => {
@@ -122,7 +88,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
         const newWidget: Widget = {
             id: `widget-${Date.now()}`,
             type: type,
-            size: 'medium',
             order: userWidgets.length
         };
         setUserWidgets(prev => [...prev, newWidget]);
@@ -131,12 +96,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
 
     const handleRemoveWidget = (id: string) => {
         setUserWidgets(prev => prev.filter(w => w.id !== id));
-    };
-
-    const handleWidgetSizeChange = (id: string, newSize: 'small' | 'medium' | 'large' | 'wide' | 'tall') => {
-        setUserWidgets(prev => prev.map(w =>
-            w.id === id ? { ...w, size: newSize } : w
-        ));
     };
 
     const handleDragStart = (e: React.DragEvent, widgetId: string) => {
@@ -317,12 +276,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
                                     <div className="preview-mini-content">
                                         <div className="preview-header">📈 Markets</div>
                                         <div className="preview-game" style={{padding: '6px'}}>
-                                            <div className="preview-team" style={{fontSize: '8px'}}>AAPL $150.00 +2.5%</div>
-                                            <div className="preview-team" style={{fontSize: '8px'}}>BTC $45K +5.2%</div>
+                                            <div className="preview-team" style={{fontSize: '8px'}}>AAPL · MSFT · NVDA</div>
+                                            <div className="preview-team" style={{fontSize: '8px'}}>BTC · ETH</div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="gallery-name">Stock Market</div>
+                                <div className="gallery-name">Markets</div>
                             </div>
 
                             {/* GitHub */}
@@ -346,16 +305,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
                 </>
             )}
 
-            <div
-                ref={setGridRef}
-                className={`widget-grid ${isEditMode ? 'edit-mode' : ''}`}
-            >
-                {userWidgets
+            {isEditMode && userWidgets.length > 1 && (
+                <div className="edit-hint">Drag widgets to reorder them</div>
+            )}
+
+            <div className={`widget-grid ${isEditMode ? 'edit-mode' : ''}`}>
+                {[...userWidgets]
                     .sort((a, b) => a.order - b.order)
                     .map((widget) => (
                     <div
                         key={widget.id}
-                        className={`widget-container widget-size-${widget.size} ${draggedWidget === widget.id ? 'dragging' : ''} ${dragOverWidget === widget.id ? 'drag-over' : ''}`}
+                        className={`widget-container ${draggedWidget === widget.id ? 'dragging' : ''} ${dragOverWidget === widget.id ? 'drag-over' : ''}`}
                         draggable={isEditMode}
                         onDragStart={(e) => handleDragStart(e, widget.id)}
                         onDragOver={(e) => handleDragOver(e, widget.id)}
@@ -364,51 +324,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ widgets, onAddWidget, onRe
                     >
                         {renderWidget(widget)}
                         {isEditMode && (
-                            <>
-                                <button
-                                    className="remove-widget-btn"
-                                    onClick={() => handleRemoveWidget(widget.id)}
-                                >
-                                    ×
-                                </button>
-                                <div className="widget-size-controls">
-                                    <button
-                                        className={`size-btn ${widget.size === 'small' ? 'active' : ''}`}
-                                        onClick={() => handleWidgetSizeChange(widget.id, 'small')}
-                                        title="Small"
-                                    >
-                                        S
-                                    </button>
-                                    <button
-                                        className={`size-btn ${widget.size === 'medium' ? 'active' : ''}`}
-                                        onClick={() => handleWidgetSizeChange(widget.id, 'medium')}
-                                        title="Medium"
-                                    >
-                                        M
-                                    </button>
-                                    <button
-                                        className={`size-btn ${widget.size === 'large' ? 'active' : ''}`}
-                                        onClick={() => handleWidgetSizeChange(widget.id, 'large')}
-                                        title="Large"
-                                    >
-                                        L
-                                    </button>
-                                    <button
-                                        className={`size-btn ${widget.size === 'wide' ? 'active' : ''}`}
-                                        onClick={() => handleWidgetSizeChange(widget.id, 'wide')}
-                                        title="Wide"
-                                    >
-                                        ↔
-                                    </button>
-                                    <button
-                                        className={`size-btn ${widget.size === 'tall' ? 'active' : ''}`}
-                                        onClick={() => handleWidgetSizeChange(widget.id, 'tall')}
-                                        title="Tall"
-                                    >
-                                        ↕
-                                    </button>
-                                </div>
-                            </>
+                            <button
+                                className="remove-widget-btn"
+                                onClick={() => handleRemoveWidget(widget.id)}
+                                title="Remove widget"
+                            >
+                                ×
+                            </button>
                         )}
                     </div>
                 ))}

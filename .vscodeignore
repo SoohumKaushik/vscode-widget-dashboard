@@ -1,5 +1,7 @@
 .vscode/**
 .vscode-test/**
+.github/**
+docs/**
 src/**
 scripts/**
 node_modules/**
@@ -12,7 +14,6 @@ vsc-extension-quickstart.md
 **/*.ts
 build.js
 resources/icon-marketplace.svg
-PROJECT_SUMMARY.md
-QUICKSTART.md
-SHOWCASE.md
-TESTING.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md

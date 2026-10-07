@@ -1,11 +1,19 @@
 {
   "name": "vscode-widget-dashboard",
   "displayName": "Widget Dashboard",
-  "description": "Customizable iOS-style widget dashboard for VS Code",
-  "version": "1.1.0",
+  "description": "iOS-style widgets in your VS Code sidebar: clock, live stocks & crypto, sports scores, GitHub activity, notes, and ambient sounds",
+  "version": "1.2.0",
   "publisher": "soohumkaushik",
+  "author": {
+    "name": "Soohum Kaushik",
+    "url": "https://github.com/SoohumKaushik"
+  },
   "license": "MIT",
   "icon": "resources/icon-marketplace.png",
+  "galleryBanner": {
+    "color": "#0a0a0a",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/SoohumKaushik/vscode-widget-dashboard.git"
@@ -20,7 +28,11 @@
     "productivity",
     "clock",
     "notes",
-    "github"
+    "github",
+    "stocks",
+    "crypto",
+    "sports",
+    "ambient"
   ],
   "engines": {
     "vscode": "^1.85.0"
