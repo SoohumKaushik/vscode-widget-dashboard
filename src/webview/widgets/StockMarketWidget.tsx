@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-interface Stock {
+// Shape of each quote posted back by the extension host (see fetchQuote in extension.ts).
+interface Quote {
     symbol: string;
-    name: string;
     price: number;
-    change: number;
     changePercent: number;
+    baseline: number;
     sparkline: number[];
+    marketOpen: boolean;
 }
 
-type WidgetSize = 'compact' | 'normal' | 'expanded';
-
-const POPULAR_STOCKS = [
+const WATCHLIST = [
     { symbol: 'AAPL', name: 'Apple' },
     { symbol: 'MSFT', name: 'Microsoft' },
-    { symbol: 'GOOGL', name: 'Google' },
+    { symbol: 'GOOGL', name: 'Alphabet' },
     { symbol: 'TSLA', name: 'Tesla' },
     { symbol: 'NVDA', name: 'NVIDIA' },
     { symbol: 'BTC-USD', name: 'Bitcoin' },
@@ -22,27 +21,29 @@ const POPULAR_STOCKS = [
 ];
 
 const NAME_BY_SYMBOL: { [symbol: string]: string } = Object.fromEntries(
-    POPULAR_STOCKS.map((s) => [s.symbol, s.name])
+    WATCHLIST.map((s) => [s.symbol, s.name])
 );
 
 const REFRESH_MS = 60000; // real quotes — refresh once a minute
 
+const isCrypto = (symbol: string) => symbol.endsWith('-USD');
+
 export const StockMarketWidget: React.FC = () => {
     // Quotes are fetched by the extension host (no CORS limits) and posted back.
     const vscode = (window as any).vscode;
-    const [stocks, setStocks] = useState<Stock[]>([]);
+    const [quotes, setQuotes] = useState<Quote[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [, setTick] = useState(0);
-    const [widgetSize, setWidgetSize] = useState<WidgetSize>('normal');
+    const hasQuotes = useRef(false);
 
     const fetchStockData = () => {
         setIsRefreshing(true);
         vscode.postMessage({
             type: 'fetchStockData',
-            symbols: POPULAR_STOCKS.map((s) => s.symbol),
+            symbols: WATCHLIST.map((s) => s.symbol),
         });
     };
 
@@ -51,30 +52,21 @@ export const StockMarketWidget: React.FC = () => {
             const message = event.data;
 
             if (message.type === 'stockData') {
-                const parsed: Stock[] = (message.data || [])
-                    .filter((item: any) => !item.error && item.price != null && item.prevClose != null)
-                    .map((item: any) => {
-                        const price = item.price;
-                        const prevClose = item.prevClose;
-                        const change = price - prevClose;
-                        const changePercent = prevClose ? (change / prevClose) * 100 : 0;
-                        return {
-                            symbol: item.symbol,
-                            name: NAME_BY_SYMBOL[item.symbol] || item.symbol,
-                            price,
-                            change,
-                            changePercent,
-                            sparkline: item.sparkline || [],
-                        };
-                    });
-
-                setStocks(parsed);
+                const parsed: Quote[] = (message.data || []).filter(
+                    (item: any) => !item.error && typeof item.price === 'number'
+                );
+                hasQuotes.current = parsed.length > 0;
+                setQuotes(parsed);
                 setError(parsed.length === 0 ? 'No market data available' : null);
                 setLastUpdate(new Date());
                 setLoading(false);
                 setIsRefreshing(false);
             } else if (message.type === 'stockDataError') {
-                setError(message.error || 'Failed to load market data');
+                // Keep showing the last good quotes if a refresh fails; the
+                // "Updated … ago" label already tells the user they're stale.
+                if (!hasQuotes.current) {
+                    setError(message.error || 'Failed to load market data');
+                }
                 setLoading(false);
                 setIsRefreshing(false);
             }
@@ -107,29 +99,28 @@ export const StockMarketWidget: React.FC = () => {
         return `${minutes}m ago`;
     };
 
-    const cycleSizeMode = () => {
-        if (widgetSize === 'compact') setWidgetSize('normal');
-        else if (widgetSize === 'normal') setWidgetSize('expanded');
-        else setWidgetSize('compact');
-    };
+    const equities = quotes.filter((q) => !isCrypto(q.symbol));
+    const usMarketClosed = equities.length > 0 && equities.every((q) => !q.marketOpen);
 
-    const renderSparkline = (data: number[]) => {
+    const renderSparkline = (data: number[], baseline: number) => {
         if (!data || data.length < 2) return null;
 
-        const min = Math.min(...data);
-        const max = Math.max(...data);
+        const min = Math.min(...data, baseline);
+        const max = Math.max(...data, baseline);
         const range = max - min || 1;
-        const width = 60;
-        const height = 20;
+        const width = 64;
+        const height = 22;
+        const pad = 1.5; // keep the stroke from being clipped at the edges
+        const y = (value: number) => pad + (1 - (value - min) / range) * (height - pad * 2);
 
         const points = data.map((value, index) => {
             const x = (index / (data.length - 1)) * width;
-            const y = height - ((value - min) / range) * height;
-            return `${x},${y}`;
+            return `${x.toFixed(1)},${y(value).toFixed(1)}`;
         }).join(' ');
 
         return (
             <svg width={width} height={height} className="sparkline">
+                <line className="sparkline-baseline" x1={0} x2={width} y1={y(baseline)} y2={y(baseline)} />
                 <polyline
                     points={points}
                     fill="none"
@@ -140,20 +131,11 @@ export const StockMarketWidget: React.FC = () => {
     };
 
     return (
-        <div className={`stock-market-widget size-${widgetSize}`}>
+        <div className="widget stock-market-widget">
             <div className="stock-header">
                 <div className="stock-title-row">
                     <h3 className="stock-title">📈 Markets</h3>
                     <div className="stock-controls">
-                        <button
-                            className="size-toggle-btn"
-                            onClick={cycleSizeMode}
-                            title={`Size: ${widgetSize}`}
-                        >
-                            {widgetSize === 'compact' && '⊟'}
-                            {widgetSize === 'normal' && '⊡'}
-                            {widgetSize === 'expanded' && '⊞'}
-                        </button>
                         <button
                             className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`}
                             onClick={handleManualRefresh}
@@ -165,7 +147,10 @@ export const StockMarketWidget: React.FC = () => {
                     </div>
                 </div>
                 {!loading && !error && (
-                    <div className="last-update">Updated {getTimeSinceUpdate()}</div>
+                    <div className="last-update">
+                        Updated {getTimeSinceUpdate()}
+                        {usMarketClosed && ' · US market closed'}
+                    </div>
                 )}
             </div>
 
@@ -174,36 +159,43 @@ export const StockMarketWidget: React.FC = () => {
 
                 {error && <div className="error-text">{error}</div>}
 
-                {!loading && !error && stocks.map((stock) => {
-                    const isPositive = stock.change >= 0;
-                    const isCrypto = stock.symbol.includes('-USD');
+                {!loading && !error && quotes.map((quote) => {
+                    const isPositive = quote.changePercent >= 0;
+                    const crypto = isCrypto(quote.symbol);
 
                     return (
-                        <div key={stock.symbol} className="stock-card">
+                        <div key={quote.symbol} className="stock-card">
                             <div className="stock-info">
                                 <div className="stock-name-row">
-                                    <span className="stock-symbol">{isCrypto ? '₿' : ''}{stock.symbol.replace('-USD', '')}</span>
-                                    <span className="stock-name">{stock.name}</span>
+                                    <span className="stock-symbol">{quote.symbol.replace(/-USD$/, '')}</span>
+                                    <span className="stock-name">{NAME_BY_SYMBOL[quote.symbol] || quote.symbol}</span>
                                 </div>
                                 <div className="stock-price-row">
                                     <span className="stock-price">
-                                        ${stock.price.toLocaleString(undefined, {
+                                        ${quote.price.toLocaleString(undefined, {
                                             minimumFractionDigits: 2,
                                             maximumFractionDigits: 2
                                         })}
                                     </span>
-                                    <span className={`stock-change ${isPositive ? 'positive' : 'negative'}`}>
-                                        {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                                    <span
+                                        className={`stock-change ${isPositive ? 'positive' : 'negative'}`}
+                                        title={crypto ? 'Change over the last 24 hours' : 'Change since previous close'}
+                                    >
+                                        {isPositive ? '+' : ''}{quote.changePercent.toFixed(2)}%
                                     </span>
                                 </div>
                             </div>
                             <div className={`stock-chart ${isPositive ? 'positive' : 'negative'}`}>
-                                {renderSparkline(stock.sparkline)}
+                                {renderSparkline(quote.sparkline, quote.baseline)}
                             </div>
                         </div>
                     );
                 })}
             </div>
+
+            {!loading && !error && (
+                <div className="stock-source">Data from Yahoo Finance · may be delayed</div>
+            )}
         </div>
     );
 };

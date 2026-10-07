@@ -33,7 +33,6 @@ interface ScoreboardData {
 
 type League = 'nba' | 'nfl';
 
-type WidgetSize = 'compact' | 'normal' | 'expanded';
 
 export const LiveSportsWidget: React.FC = () => {
     const [selectedLeague, setSelectedLeague] = useState<League>('nfl');
@@ -43,7 +42,6 @@ export const LiveSportsWidget: React.FC = () => {
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [, setTick] = useState(0); // Force re-render for time updates
-    const [widgetSize, setWidgetSize] = useState<WidgetSize>('normal');
 
     const fetchScores = async (league: League, isManual = false) => {
         if (isManual) {
@@ -116,27 +114,12 @@ export const LiveSportsWidget: React.FC = () => {
         return `${minutes}m ago`;
     };
 
-    const cycleSizeMode = () => {
-        if (widgetSize === 'compact') setWidgetSize('normal');
-        else if (widgetSize === 'normal') setWidgetSize('expanded');
-        else setWidgetSize('compact');
-    };
-
     return (
-        <div className={`live-sports-widget size-${widgetSize}`}>
+        <div className="widget live-sports-widget">
             <div className="sports-header">
                 <div className="sports-title-row">
                     <h3 className="sports-title">🏀 Live Sports</h3>
                     <div className="sports-controls">
-                        <button
-                            className="size-toggle-btn"
-                            onClick={cycleSizeMode}
-                            title={`Size: ${widgetSize}`}
-                        >
-                            {widgetSize === 'compact' && '⊟'}
-                            {widgetSize === 'normal' && '⊡'}
-                            {widgetSize === 'expanded' && '⊞'}
-                        </button>
                         <button
                             className={`refresh-btn ${isRefreshing ? 'spinning' : ''}`}
                             onClick={handleManualRefresh}

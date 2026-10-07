@@ -35,13 +35,11 @@ interface Issue {
 }
 
 type ViewMode = 'notifications' | 'prs' | 'issues';
-type WidgetSize = 'compact' | 'normal' | 'expanded';
 
 export const GitHubWidget: React.FC = () => {
     // Get vscode API from window (set by Dashboard)
     const vscode = (window as any).vscode;
     const [viewMode, setViewMode] = useState<ViewMode>('notifications');
-    const [widgetSize, setWidgetSize] = useState<WidgetSize>('normal');
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
     const [issues, setIssues] = useState<Issue[]>([]);
@@ -167,12 +165,6 @@ export const GitHubWidget: React.FC = () => {
         };
     }, [isAuthenticated]);
 
-    const cycleSizeMode = () => {
-        if (widgetSize === 'compact') setWidgetSize('normal');
-        else if (widgetSize === 'normal') setWidgetSize('expanded');
-        else setWidgetSize('compact');
-    };
-
     const getTimeSinceUpdate = () => {
         const seconds = Math.floor((new Date().getTime() - lastUpdate.getTime()) / 1000);
         if (seconds < 60) return `${seconds}s ago`;
@@ -214,7 +206,7 @@ export const GitHubWidget: React.FC = () => {
     const unreadCount = notifications.filter(n => n.unread).length;
 
     return (
-        <div className={`github-widget size-${widgetSize}`}>
+        <div className="widget github-widget">
             <div className="github-header">
                 <div className="github-title-row">
                     <h3 className="github-title">
@@ -222,15 +214,6 @@ export const GitHubWidget: React.FC = () => {
                         {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
                     </h3>
                     <div className="github-controls">
-                        <button
-                            className="size-toggle-btn"
-                            onClick={cycleSizeMode}
-                            title={`Size: ${widgetSize}`}
-                        >
-                            {widgetSize === 'compact' && '⊟'}
-                            {widgetSize === 'normal' && '⊡'}
-                            {widgetSize === 'expanded' && '⊞'}
-                        </button>
                         <button
                             className="refresh-btn"
                             onClick={fetchData}
